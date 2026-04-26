@@ -228,6 +228,56 @@
             .radio-option { font-size: 12px; padding: 8px; }
             .toast { white-space: normal; text-align: center; }
         }
+
+        /* Online/Offline Status Indicator */
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.online {
+            background-color: #22c55e;
+            box-shadow: 0 0 5px #22c55e;
+        }
+
+        .status-dot.offline {
+            background-color: #ef4444;
+            box-shadow: none;
+            animation: none;
+        }
+
+        .status-text {
+            color: white;
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 5px rgba(34, 197, 94, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+            }
+        }
+
+        /* Optional: Add a connection quality indicator */
+        .status-quality {
+            font-size: 10px;
+            color: rgba(255,255,255,0.7);
+            margin-left: 5px;
+        }
     </style>
 </head>
 <body>
@@ -241,7 +291,11 @@
                 </div>
             </div>
             <div class="sync-status">
-                <span id="onlineStatus">Checking...</span>
+                <div class="status-indicator">
+                    <div class="status-dot offline" id="statusDot"></div>
+                    <span class="status-text" id="onlineStatus">Checking connection...</span>
+                    <span class="status-quality" id="connectionQuality"></span>
+                </div>
                 <span id="pendingCount" class="pending-badge">0 pending</span>
             </div>
             <div class="cache-info" id="cacheInfo">Click "Refresh Data" to load devices</div>
@@ -471,7 +525,33 @@
         }
         
         function updateOnlineStatus() {
-            document.getElementById('onlineStatus').innerHTML = navigator.onLine ? '🟢 Online' : '🔴 Offline';
+            const statusDot = document.getElementById('statusDot');
+            const statusText = document.getElementById('onlineStatus');
+            
+            if (navigator.onLine) {
+                statusDot.className = 'status-dot online';
+                statusText.innerHTML = 'Online';
+            } else {
+                statusDot.className = 'status-dot offline';
+                statusText.innerHTML = 'Offline';
+            }
+        }
+
+        function initConnectionMonitoring() {
+            updateOnlineStatus();
+            
+            window.addEventListener('online', () => {
+                updateOnlineStatus();
+                showToast('Connection restored! You are back online.', false);
+                if (pendingData.length > 0 && confirm('You have pending data. Sync now?')) {
+                    syncToSheet();
+                }
+            });
+            
+            window.addEventListener('offline', () => {
+                updateOnlineStatus();
+                showToast('You are offline. Data will be saved locally.', true);
+            });
         }
         
         function toggleAssetChanges() {
